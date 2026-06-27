@@ -62,7 +62,39 @@ def build_html():
         js = f.read()
     with open("index.html", encoding="utf-8") as f:
         html = f.read()
-    return html.replace('<script src="questions.js"></script>',
+
+    # 親フレーム（Streamlit）の "Manage app" ボタンを非表示にするJS
+    hide_js = """
+<script>
+(function hideManage() {
+  try {
+    var docs = [document];
+    try { docs.push(window.parent.document); } catch(e) {}
+    docs.forEach(function(doc) {
+      // テキストで照合してボタン自体とその親コンテナを非表示
+      doc.querySelectorAll('button, a, div').forEach(function(el) {
+        if ((el.innerText || '').trim().replace(/[<>]/g,'').trim() === 'Manage app') {
+          var target = el;
+          // 小さい親要素まで遡って非表示
+          while (target.parentElement &&
+                 target.parentElement.getBoundingClientRect().height < 200) {
+            target = target.parentElement;
+          }
+          target.style.setProperty('display', 'none', 'important');
+        }
+      });
+      // CSSクラス名でも照合
+      doc.querySelectorAll('[class*="deploy"],[class*="Deploy"],[class*="manage"]')
+        .forEach(function(el){ el.style.setProperty('display','none','important'); });
+    });
+  } catch(e) {}
+  setTimeout(hideManage, 600);
+})();
+</script>
+"""
+    html = html.replace('<script src="questions.js"></script>',
                         f'<script>{js}</script>')
+    html = html.replace('</body>', hide_js + '</body>')
+    return html
 
 components.html(build_html(), height=h, scrolling=True)
