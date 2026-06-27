@@ -1,5 +1,6 @@
 import streamlit as st
 import json, re, random
+from streamlit_local_storage import LocalStorage
 
 st.set_page_config(
     page_title="1級施工管理技士○×テスト",
@@ -7,23 +8,18 @@ st.set_page_config(
     layout="centered",
     initial_sidebar_state="collapsed",
 )
-# iOSホーム画面追加時の表示名を上書き
+
 st.markdown("""
 <meta name="apple-mobile-web-app-title" content="1級施工管理技士○×テスト">
 <meta name="apple-mobile-web-app-capable" content="yes">
-""", unsafe_allow_html=True)
-
-st.markdown("""
 <style>
 .block-container { max-width: 640px !important; padding: 2.5rem 1rem 4rem !important; }
-/* 全ボタン共通 */
 .stButton > button {
     border-radius: 10px !important;
     font-size: 15px !important;
     font-weight: 600 !important;
     min-height: 44px !important;
 }
-/* ○×ボタン用HTMLスタイル */
 .ans-grid {
     display: grid; grid-template-columns: 1fr 1fr;
     gap: 14px; margin: 12px 0 4px;
@@ -39,10 +35,8 @@ st.markdown("""
 .ans-btn small { display: block; font-size: 0.35em; margin-top: 4px; }
 .ans-maru  { background:#eef4ee; border:2px solid #7aab7a; color:#2d5a2d; }
 .ans-batsu { background:#f5eeed; border:2px solid #b87070; color:#7a2d2d; }
-/* metricsを小さく */
 [data-testid="stMetricLabel"] p { font-size: 11px !important; }
 [data-testid="stMetricValue"]    { font-size: 20px !important; }
-/* dividerのマージン調整 */
 hr { margin: 0.6rem 0 !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -57,9 +51,32 @@ def load_questions():
 
 
 QUESTIONS = load_questions()
-YEARS = sorted(set(q["year"] for q in QUESTIONS))
-CATS  = sorted(set(q["category"] for q in QUESTIONS))
+QMAP  = {q["id"]: q for q in QUESTIONS}
+YEARS = sorted(set(q["year"]      for q in QUESTIONS))
+CATS  = sorted(set(q["category"]  for q in QUESTIONS))
 
+# ── localStorage ─────────────────────────────────────────────────────
+ls = LocalStorage()
+STORAGE_KEY = "k1_quiz_v1"
+
+def save_progress():
+    S = st.session_state
+    if not S.queue:
+        return
+    data = {
+        "queue_ids":        [q["id"] for q in S.queue],
+        "idx":              S.idx,
+        "correct":          S.correct,
+        "total":            S.total,
+        "wrong_ids":        S.wrong_ids,
+        "answered":         S.answered,
+        "last_ok":          S.last_ok,
+        "cumulative_wrong": list(S.cumulative_wrong),
+    }
+    ls.setItem(STORAGE_KEY, data)
+
+def clear_progress():
+    ls.deleteItem(STORAGE_KEY)
 
 # ── セッション初期化 ──────────────────────────────────────────────────
 def init():
@@ -76,6 +93,27 @@ def init():
 init()
 S = st.session_state
 
+# ── localStorageからの復元（ページ更新・再起動対策）─────────────────
+ls_data = ls.getItem(STORAGE_KEY)
+
+if ls_data and not st.session_state.get("_storage_restored", False):
+    queue = [QMAP[id] for id in ls_data.get("queue_ids", []) if id in QMAP]
+    if queue:
+        S.queue    = queue
+        S.idx      = min(ls_data.get("idx", 0), len(queue) - 1)
+        S.correct  = ls_data.get("correct", 0)
+        S.total    = ls_data.get("total", 0)
+        S.wrong_ids = ls_data.get("wrong_ids", [])
+        S.answered  = ls_data.get("answered", False)
+        S.last_ok   = ls_data.get("last_ok", None)
+        S.cumulative_wrong = set(ls_data.get("cumulative_wrong", []))
+        S.screen   = "quiz"
+    st.session_state["_storage_restored"] = True
+    st.rerun()
+
+if not st.session_state.get("_storage_restored", False):
+    st.session_state["_storage_restored"] = True
+
 
 def handle_answer(user_ans: bool):
     q = S.queue[S.idx]
@@ -91,11 +129,12 @@ def handle_answer(user_ans: bool):
     S.last_ok  = ok
 
 
-# ── ○×ボタン（クエリパラメータ経由）の処理 ─────────────────────────
+# ── ○×ボタン（クエリパラメータ経由）─────────────────────────────────
 params = st.query_params
 if "ans" in params and S.screen == "quiz" and not S.answered:
     handle_answer(params["ans"] == "1")
     st.query_params.clear()
+    save_progress()
     st.rerun()
 
 
@@ -105,7 +144,6 @@ if "ans" in params and S.screen == "quiz" and not S.answered:
 if S.screen == "start":
     st.markdown("# 1級建築施工管理技士\n## ○×クイズ")
 
-    # 続きから再開カード
     if S.saved:
         p = S.saved
         remain = len(p["queue"]) - p["idx"]
@@ -119,10 +157,10 @@ if S.screen == "start":
             S.correct, S.total = p["correct"], p["total"]
             S.wrong_ids        = p["wrong_ids"]
             S.answered = False; S.saved = None; S.screen = "quiz"
+            save_progress()
             st.rerun()
         st.divider()
 
-    # フィルター
     sel_years = st.multiselect("出題年度（複数選択可）", YEARS, placeholder="全年度")
     sel_cats  = st.multiselect("カテゴリ（複数選択可）",  CATS,  placeholder="全カテゴリ")
     order     = st.radio("出題順", ["シャッフル", "順番通り", "累計苦手のみ"], horizontal=True)
@@ -141,9 +179,11 @@ if S.screen == "start":
     if st.button("スタート ▶", type="primary", use_container_width=True):
         if not qs:
             st.error("条件に合う問題がありません。"); st.stop()
+        clear_progress()
         S.queue    = random.sample(qs, len(qs)) if order == "シャッフル" else qs[:]
         S.idx      = 0; S.correct = 0; S.total = 0; S.wrong_ids = []
         S.answered = False; S.saved = None; S.screen = "quiz"
+        save_progress()
         st.rerun()
 
 
@@ -160,14 +200,13 @@ elif S.screen == "quiz":
 
     q = queue[idx]
 
-    # ホームへ
     if st.button("← ホームに戻る", key="home"):
         S.saved = dict(queue=queue, idx=idx,
                        correct=S.correct, total=S.total,
                        wrong_ids=S.wrong_ids[:])
+        save_progress()
         S.screen = "start"; st.rerun()
 
-    # 進捗バー
     st.progress(idx / n)
     m1, m2, m3 = st.columns(3)
     m1.metric("回答済", f"{S.total}問")
@@ -176,7 +215,6 @@ elif S.screen == "quiz":
 
     st.divider()
 
-    # 問題
     st.caption(f"#{idx+1}/{n}　{q['year']} ｜ {q['category']}")
     if q.get("context"):
         with st.expander("問題文", expanded=True):
@@ -184,20 +222,17 @@ elif S.screen == "quiz":
 
     st.markdown(f"### {q['statement']}")
 
-    # ── 未回答: HTML製 ○× ボタン ────────────────────────────────────
     if not S.answered:
         st.markdown(f"""
 <div class="ans-grid">
-  <a class="ans-btn ans-maru" href="?ans=1">○<small>正しい</small></a>
+  <a class="ans-btn ans-maru"  href="?ans=1">○<small>正しい</small></a>
   <a class="ans-btn ans-batsu" href="?ans=0">×<small>誤り</small></a>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── 回答後フィードバック ────────────────────────────────────────
     else:
         ok = S.last_ok
         correct_label = "○（正しい）" if q["answer"] else "×（誤り）"
-
         if ok:
             st.success("✓ 正解！", icon=None)
         else:
@@ -214,7 +249,11 @@ elif S.screen == "quiz":
         with fc1:
             if st.button("次の問題 →", type="primary", use_container_width=True, key="next"):
                 S.idx += 1; S.answered = False
-                if S.idx >= n: S.screen = "results"
+                if S.idx >= n:
+                    S.screen = "results"
+                    clear_progress()
+                else:
+                    save_progress()
                 st.rerun()
         with fc2:
             if st.button("← やり直す", use_container_width=True, key="undo"):
@@ -226,7 +265,9 @@ elif S.screen == "quiz":
                     S.cumulative_wrong.discard(q["id"])
                 else:
                     S.correct = max(0, S.correct - 1)
-                S.answered = False; st.rerun()
+                S.answered = False
+                save_progress()
+                st.rerun()
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -250,13 +291,15 @@ elif S.screen == "results":
     if st.button("もう一度（全問）", type="primary", use_container_width=True, key="r_all"):
         S.queue = random.sample(S.queue, len(S.queue))
         S.idx = 0; S.correct = 0; S.total = 0
-        S.wrong_ids = []; S.answered = False; S.screen = "quiz"; st.rerun()
+        S.wrong_ids = []; S.answered = False; S.screen = "quiz"
+        save_progress(); st.rerun()
 
     if wrong_qs:
         if st.button(f"間違えた問題のみ（{len(wrong_qs)}問）", use_container_width=True, key="r_wrong"):
             S.queue = random.sample(wrong_qs, len(wrong_qs))
             S.idx = 0; S.correct = 0; S.total = 0
-            S.wrong_ids = []; S.answered = False; S.screen = "quiz"; st.rerun()
+            S.wrong_ids = []; S.answered = False; S.screen = "quiz"
+            save_progress(); st.rerun()
 
     if S.cumulative_wrong:
         cw_qs = [q for q in QUESTIONS if q["id"] in S.cumulative_wrong]
@@ -264,7 +307,8 @@ elif S.screen == "results":
             if st.button(f"累計苦手問題（{len(cw_qs)}問）", use_container_width=True, key="r_cw"):
                 S.queue = random.sample(cw_qs, len(cw_qs))
                 S.idx = 0; S.correct = 0; S.total = 0
-                S.wrong_ids = []; S.answered = False; S.screen = "quiz"; st.rerun()
+                S.wrong_ids = []; S.answered = False; S.screen = "quiz"
+                save_progress(); st.rerun()
 
     if st.button("問題選択に戻る", use_container_width=True, key="r_home"):
         S.screen = "start"; st.rerun()
