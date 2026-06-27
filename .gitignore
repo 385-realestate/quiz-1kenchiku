@@ -21,3 +21,6 @@ final_check.txt
 
 # ログ
 *.log
+
+# シークレット（パスワード等）— GitHubに上げない
+.streamlit/secrets.toml

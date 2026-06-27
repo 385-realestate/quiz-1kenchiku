@@ -9,6 +9,57 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# ── パスワード認証 ──────────────────────────────────────────
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("""
+    <style>
+    /* ── ログイン画面デザイン ── */
+    .login-wrap {
+        max-width: 420px;
+        margin: 80px auto 0;
+        padding: 40px 36px;
+        background: #1e3a6e;
+        border-radius: 12px;
+        text-align: center;
+        color: #fff;
+    }
+    .login-wrap h2 { font-size: 1.5rem; margin-bottom: 4px; }
+    .login-wrap p  { font-size: 0.85rem; color: #b0bec5; margin-bottom: 24px; }
+
+    /* ── Streamlit 英語UI を非表示 ── */
+    /* "Press Enter to apply" ヒント */
+    .stTextInput [data-baseweb="input"] + div,
+    small.st-emotion-cache-1dp5vir,
+    [data-testid="InputInstructions"] { display: none !important; }
+
+    /* "Running..." スピナーのテキスト */
+    [data-testid="stStatusWidget"] { display: none !important; }
+
+    /* ヘッダー・フッター全般 */
+    #MainMenu, header, footer { display: none !important; }
+
+    /* ログイン画面全体を中央寄せ */
+    .block-container { max-width: 480px !important; padding-top: 0 !important; }
+    </style>
+    <div class="login-wrap">
+      <h2>🏗️ 1級建築施工管理技士</h2>
+      <p>○×クイズ 1000問 — 過去問&頻出知識</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    pw = st.text_input("アクセスパスワード", type="password", placeholder="パスワードを入力")
+    if st.button("入る", use_container_width=True):
+        if pw == st.secrets["APP_PASSWORD"]:
+            st.session_state.authenticated = True
+            st.rerun()
+        else:
+            st.error("パスワードが違います")
+    st.stop()
+# ───────────────────────────────────────────────────────────
+
 # Streamlit のクロム（ツールバー・バッジ・パディング）を全て非表示
 st.markdown("""
 <style>
