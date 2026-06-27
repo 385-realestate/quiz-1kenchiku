@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Streamlit のクロム（ツールバー・パディング）を全て非表示
+# Streamlit のクロム（ツールバー・バッジ・パディング）を全て非表示
 st.markdown("""
 <style>
 #MainMenu,
@@ -17,9 +17,15 @@ header[data-testid="stHeader"],
 footer,
 [data-testid="stToolbar"],
 [data-testid="stDecoration"],
-[data-testid="stStatusWidget"] { display: none !important; }
-.block-container  { padding: 0 !important; max-width: 100% !important; }
-[data-testid="stVerticalBlock"]   { gap: 0 !important; padding: 0 !important; }
+[data-testid="stStatusWidget"],
+[data-testid="stAppViewFooter"],
+div[class*="viewerBadge"],
+div[class*="ViewerBadge"],
+div[class*="badge"],
+a[href*="streamlit.io"],
+a[href*="share.streamlit.io"] { display: none !important; }
+.block-container   { padding: 0 !important; max-width: 100% !important; }
+[data-testid="stVerticalBlock"]    { gap: 0 !important; padding: 0 !important; }
 [data-testid="stAppViewContainer"] { padding: 0 !important; }
 iframe { display: block; border: none; }
 </style>
