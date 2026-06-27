@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1級建築施工管理技士 ○×クイズ</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', 'Yu Gothic', sans-serif;
+  background: #f0f2f5;
+  color: #333;
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+/* ヘッダー */
+.header {
+  background: #1a237e;
+  color: white;
+  padding: 14px 16px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.header h1 { font-size: 15px; font-weight: bold; letter-spacing: 0.05em; }
+.header .sub { font-size: 11px; opacity: 0.75; margin-top: 3px; }
+
+/* 画面切替 */
+.screen { display: none; padding-bottom: 32px; }
+.screen.active { display: block; }
+
+/* ── スタート画面 ── */
+.start-screen { padding: 20px 16px 32px; }
+
+.card {
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+.card h3 { font-size: 12px; color: #888; margin-bottom: 10px; letter-spacing: 0.04em; }
+
+.chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 5px 13px;
+  border: 2px solid #ddd;
+  border-radius: 20px;
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+  user-select: none;
+}
+.chip.on { border-color: #1a237e; background: #1a237e; color: white; }
+
+.start-btn {
+  width: 100%;
+  padding: 16px;
+  background: #1a237e;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 8px;
+  letter-spacing: 0.1em;
+}
+.start-btn:active { opacity: 0.85; }
+
+.count-info { font-size: 14px; color: #555; font-weight: 500; }
+.count-num { font-size: 22px; font-weight: bold; color: #1a237e; }
+
+/* ── クイズ画面 ── */
+.quiz-screen { padding: 0; }
+
+.progress-bar { height: 4px; background: #e0e0e0; }
+.progress-fill { height: 100%; background: #1a237e; transition: width 0.3s ease; }
+
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 16px 6px;
+  font-size: 12px;
+  color: #888;
+}
+
+.q-card {
+  margin: 8px 16px;
+  background: white;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+
+.context-box {
+  background: #f7f8ff;
+  border-left: 3px solid #7986cb;
+  border-radius: 0 6px 6px 0;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #555;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.context-box.collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ctx-toggle {
+  color: #5c6bc0;
+  font-size: 11px;
+  margin-top: 6px;
+  display: block;
+}
+
+.statement {
+  font-size: 16px;
+  line-height: 1.65;
+  font-weight: 600;
+  color: #1a1a2e;
+  padding: 4px 0 8px;
+}
+
+.cat-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: #888;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 2px 7px;
+  margin-bottom: 8px;
+}
+
+.answer-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 12px 16px;
+}
+.btn-maru, .btn-batsu {
+  border-radius: 14px;
+  padding: 20px 12px;
+  font-size: 52px;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.1s, opacity 0.1s;
+  border: none;
+  line-height: 1;
+}
+.btn-maru { background: #e8f5e9; border: 3px solid #43a047; }
+.btn-batsu { background: #ffebee; border: 3px solid #e53935; }
+.btn-maru:active, .btn-batsu:active { transform: scale(0.93); opacity: 0.8; }
+.btn-label { font-size: 13px; color: #666; margin-top: 6px; }
+
+/* フィードバック */
+.feedback-box {
+  margin: 0 16px 12px;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.feedback-box.correct { background: #e8f5e9; border-left: 5px solid #43a047; }
+.feedback-box.wrong   { background: #ffebee; border-left: 5px solid #e53935; }
+
+.fb-head { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+.feedback-box.correct .fb-head { color: #2e7d32; }
+.feedback-box.wrong   .fb-head { color: #b71c1c; }
+
+.fb-body { font-size: 13px; line-height: 1.6; color: #444; }
+
+.next-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 12px;
+  padding: 14px;
+  background: #1a237e;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.next-btn:active { opacity: 0.85; }
+
+/* ── 結果画面 ── */
+.results-screen { padding: 32px 16px; text-align: center; }
+
+.score-ring {
+  width: 150px; height: 150px;
+  border-radius: 50%;
+  border: 8px solid #1a237e;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+.score-pct { font-size: 42px; font-weight: bold; color: #1a237e; line-height: 1; }
+.score-sub { font-size: 12px; color: #888; margin-top: 4px; }
+.score-detail { font-size: 14px; color: #666; margin-bottom: 24px; }
+
+.res-btns { display: grid; gap: 10px; }
+.res-btn {
+  padding: 13px;
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.res-btn.primary { background: #1a237e; color: white; border: none; }
+.res-btn.outline { background: white; color: #1a237e; border: 2px solid #1a237e; }
+.res-btn:active { opacity: 0.8; }
+
+/* 戻るボタン */
+.back-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 16px 0;
+}
+.back-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.back-btn:hover { color: #1a237e; }
+.prev-btn {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px 8px;
+  padding: 11px;
+  background: white;
+  color: #555;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.prev-btn:active { opacity: 0.8; }
+
+/* 間違い一覧 */
+.wrong-section { text-align: left; margin-top: 20px; }
+.wrong-section h3 { font-size: 14px; color: #555; margin-bottom: 10px; }
+.wrong-card {
+  background: white;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-left: 4px solid #e53935;
+}
+.wrong-stmt { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.wrong-ans { font-size: 12px; color: #888; }
+.wrong-exp { font-size: 12px; color: #555; margin-top: 6px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>1級建築施工管理技士</h1>
+  <div class="sub">○×クイズ — 過去問＆頻出知識</div>
+</div>
+
+<!-- ====== スタート画面 ====== -->
+<div id="startScreen" class="screen active start-screen">
+  <div class="card">
+    <h3>出題年度・カテゴリ（複数選択可）</h3>
+    <div class="chip-group" id="yearFilters"></div>
+  </div>
+
+  <div class="card">
+    <h3>出題カテゴリ（複数選択可）</h3>
+    <div class="chip-group" id="catFilters"></div>
+  </div>
+
+  <div class="card">
+    <h3>出題順</h3>
+    <div class="chip-group" id="orderBtns">
+      <span class="chip on" data-order="shuffle" onclick="pickOrder(this)">シャッフル</span>
+      <span class="chip" data-order="seq"     onclick="pickOrder(this)">順番通り</span>
+      <span class="chip" data-order="wrong"   onclick="pickOrder(this)">累計苦手のみ</span>
+    </div>
+    <p style="font-size:11px; color:#999; margin-top:8px">※間違えた問題を順番に復習するには、結果画面の「間違えた問題を順番通りに」ボタンをお使いください</p>
+  </div>
+
+  <div class="card" style="padding: 14px 16px">
+    <div style="display:flex; justify-content:space-between; align-items:center">
+      <div class="count-info">出題数: <span class="count-num" id="qCount">0</span> 問</div>
+      <div style="font-size:13px; color:#e53935; font-weight:600" id="wrongBadge"></div>
+    </div>
+  </div>
+
+  <button class="start-btn" onclick="startQuiz()">スタート ▶</button>
+</div>
+
+<!-- ====== クイズ画面 ====== -->
+<div id="quizScreen" class="screen quiz-screen">
+  <div class="back-row">
+    <button class="back-btn" onclick="goHome()">← ホームに戻る</button>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="pFill"></div></div>
+  <div class="progress-row">
+    <span id="pText">1 / 10</span>
+    <span id="pScore">正解 0 / 0</span>
+  </div>
+
+  <div class="q-card">
+    <div id="catLabel" class="cat-badge"></div>
+    <div class="context-box collapsed" id="ctxBox" onclick="toggleCtx()">
+      <span id="ctxText"></span>
+      <span class="ctx-toggle" id="ctxToggle">▼ 問題文を展開</span>
+    </div>
+    <div class="statement" id="stmtText"></div>
+  </div>
+
+  <div id="ansArea">
+    <div class="answer-btns">
+      <div>
+        <button class="btn-maru" onclick="answer(true)">○</button>
+        <div class="btn-label">正しい</div>
+      </div>
+      <div>
+        <button class="btn-batsu" onclick="answer(false)">×</button>
+        <div class="btn-label">誤り</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="fbArea" style="display:none">
+    <div class="feedback-box" id="fbBox">
+      <div class="fb-head" id="fbHead"></div>
+      <div class="fb-body" id="fbBody"></div>
+    </div>
+    <button class="next-btn" id="nextBtn" onclick="nextQ()">次の問題 →</button>
+    <button class="prev-btn" id="prevBtn" onclick="undoAnswer()">← この問題をやり直す</button>
+  </div>
+</div>
+
+<!-- ====== 結果画面 ====== -->
+<div id="resultsScreen" class="screen results-screen">
+  <div class="score-ring">
+    <div class="score-pct" id="resPct">0%</div>
+    <div class="score-sub">正解率</div>
+  </div>
+  <div class="score-detail" id="resDetail"></div>
+
+  <div class="res-btns">
+    <button class="res-btn primary" onclick="retryAll()">もう一度（全問）</button>
+    <button class="res-btn outline" onclick="retryWrong()">間違えた問題のみ（この回）</button>
+    <button class="res-btn outline" onclick="retryWrongSeq()">間違えた問題を順番通りに</button>
+    <button class="res-btn outline" onclick="retryStoredWrong()">累計苦手問題を全部やる</button>
+    <button class="res-btn outline" onclick="toggleWrongList()">間違えた問題一覧を見る</button>
+    <button class="res-btn outline" onclick="goHome()">問題選択に戻る</button>
+    <button class="res-btn outline" style="color:#aaa; border-color:#ddd; font-size:13px" onclick="resetWrong()">累計苦手リストをリセット</button>
+  </div>
+
+  <div class="wrong-section" id="wrongSection" style="display:none">
+    <h3>間違えた問題</h3>
+    <div id="wrongCards"></div>
+  </div>
+</div>
+
+<script src="questions.js"></script>
+<script>
+// ── State ───────────────────────────────────────────────────────
+const S = {
+  years: new Set(['__all__']),
+  cats:  new Set(['__all__']),
+  order: 'shuffle',
+  queue: [],
+  idx: 0,
+  correct: 0,
+  total: 0,
+  wrongIds: [],
+  ctxOpen: false,
+};
+
+// 累計の苦手履歴（localStorage）
+function loadWrong() { return new Set(JSON.parse(localStorage.getItem('k1_wrong') || '[]')); }
+function saveWrong(id) {
+  const s = loadWrong(); s.add(id);
+  localStorage.setItem('k1_wrong', JSON.stringify([...s]));
+}
+function clearWrong(id) {
+  const s = loadWrong(); s.delete(id);
+  localStorage.setItem('k1_wrong', JSON.stringify([...s]));
+}
+
+// ── 初期化 ──────────────────────────────────────────────────────
+function init() {
+  buildChips('yearFilters', [...new Set(QUESTIONS.map(q => q.year))].sort(), S.years, updateCount);
+  buildChips('catFilters',  [...new Set(QUESTIONS.map(q => q.category))].sort(), S.cats, updateCount);
+  updateCount();
+}
+
+function buildChips(containerId, items, stateSet, onChange) {
+  const c = document.getElementById(containerId);
+  const all = mkChip('全て', '__all__', true, () => {
+    stateSet.clear(); stateSet.add('__all__');
+    c.querySelectorAll('.chip').forEach(b => b.classList.toggle('on', b.dataset.v === '__all__'));
+    onChange();
+  });
+  c.appendChild(all);
+
+  items.forEach(item => {
+    c.appendChild(mkChip(item, item, false, () => {
+      stateSet.delete('__all__');
+      c.querySelector('[data-v="__all__"]').classList.remove('on');
+      const el = c.querySelector(`[data-v="${CSS.escape(item)}"]`);
+      stateSet.has(item) ? (stateSet.delete(item), el.classList.remove('on'))
+                         : (stateSet.add(item),    el.classList.add('on'));
+      if (stateSet.size === 0) {
+        stateSet.add('__all__');
+        c.querySelector('[data-v="__all__"]').classList.add('on');
+      }
+      onChange();
+    }));
+  });
+}
+
+function mkChip(label, val, on, cb) {
+  const s = document.createElement('span');
+  s.className = 'chip' + (on ? ' on' : '');
+  s.dataset.v = val;
+  s.textContent = label;
+  s.onclick = cb;
+  return s;
+}
+
+function pickOrder(el) {
+  document.querySelectorAll('#orderBtns .chip').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  S.order = el.dataset.order;
+  updateCount();
+}
+
+function filtered() {
+  let qs = QUESTIONS;
+  if (!S.years.has('__all__')) qs = qs.filter(q => S.years.has(q.year));
+  if (!S.cats.has('__all__'))  qs = qs.filter(q => S.cats.has(q.category));
+  if (S.order === 'wrong') {
+    const w = loadWrong();
+    qs = qs.filter(q => w.has(q.id));
+  }
+  return qs;
+}
+
+function updateCount() {
+  document.getElementById('qCount').textContent = filtered().length;
+  const wc = loadWrong().size;
+  const badge = document.getElementById('wrongBadge');
+  badge.textContent = wc > 0 ? `累計苦手 ${wc} 問` : '';
+}
+
+function shuffle(a) {
+  const b = [...a];
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+}
+
+// ── クイズ開始 ──────────────────────────────────────────────────
+function startQuiz() {
+  const qs = filtered();
+  if (!qs.length) {
+    if (S.order === 'wrong') {
+      alert('累計苦手問題がまだありません。\nまずはシャッフルまたは順番通りモードで練習してください！');
+    } else {
+      alert('条件に合う問題がありません。');
+    }
+    return;
+  }
+  S.queue = S.order === 'shuffle' ? shuffle(qs) : qs;
+  S.idx = 0; S.correct = 0; S.total = 0; S.wrongIds = [];
+  showScreen('quizScreen');
+  renderQ();
+}
+
+function renderQ() {
+  const q  = S.queue[S.idx];
+  const n  = S.queue.length;
+  const pct = (S.idx / n) * 100;
+
+  document.getElementById('pFill').style.width  = pct + '%';
+  document.getElementById('pText').textContent  = `${S.idx + 1} / ${n}`;
+  document.getElementById('pScore').textContent = `正解 ${S.correct} / ${S.total}`;
+
+  document.getElementById('catLabel').textContent = `${q.year} ｜ ${q.category}`;
+  document.getElementById('ctxText').textContent  = q.context || '';
+  document.getElementById('stmtText').textContent = q.statement;
+
+  S.ctxOpen = false;
+  const ctx = document.getElementById('ctxBox');
+  ctx.classList.add('collapsed');
+  document.getElementById('ctxToggle').textContent = '▼ 問題文を展開';
+
+  document.getElementById('ansArea').style.display = '';
+  document.getElementById('fbArea').style.display  = 'none';
+  document.getElementById('nextBtn').textContent =
+    S.idx === n - 1 ? '結果を見る' : '次の問題 →';
+}
+
+function toggleCtx() {
+  S.ctxOpen = !S.ctxOpen;
+  const ctx = document.getElementById('ctxBox');
+  ctx.classList.toggle('collapsed', !S.ctxOpen);
+  document.getElementById('ctxToggle').textContent = S.ctxOpen ? '▲ 閉じる' : '▼ 問題文を展開';
+}
+
+// 説明文を返す（データ側で既にクリーニング済み、残余の処理のみ）
+function cleanExp(exp) {
+  return (exp || '').trim();
+}
+
+// ── 回答 ────────────────────────────────────────────────────────
+function answer(userAns) {
+  const q = S.queue[S.idx];
+  const ok = userAns === q.answer;
+  S.total++;
+  if (ok) {
+    S.correct++;
+    clearWrong(q.id);
+  } else {
+    S.wrongIds.push(q.id);
+    saveWrong(q.id);
+  }
+
+  const box  = document.getElementById('fbBox');
+  const head = document.getElementById('fbHead');
+  const body = document.getElementById('fbBody');
+
+  box.className = 'feedback-box ' + (ok ? 'correct' : 'wrong');
+  head.textContent = ok
+    ? '✓ 正解！'
+    : `✗ 不正解　正解: ${q.answer ? '○（正しい）' : '×（誤り）'}`;
+
+  const expText = cleanExp(q.explanation);
+
+  if (q.answer === false) {
+    // × 問題：理由を必ず明示
+    const reason = expText || '（解説文なし）';
+    body.innerHTML =
+      `<span style="font-weight:bold; color:#b71c1c; display:block; margin-bottom:4px">なぜ×か：</span>${reason}`;
+  } else {
+    // ○ 問題：確認程度でよい
+    body.textContent = expText || 'この記述は正しいです。';
+  }
+
+  document.getElementById('pScore').textContent = `正解 ${S.correct} / ${S.total}`;
+  document.getElementById('ansArea').style.display = 'none';
+  document.getElementById('fbArea').style.display  = '';
+}
+
+function nextQ() {
+  S.idx++;
+  if (S.idx >= S.queue.length) showResults();
+  else renderQ();
+}
+
+// 現在の問題の回答を取り消してやり直す
+function undoAnswer() {
+  const q = S.queue[S.idx];
+  S.total = Math.max(0, S.total - 1);
+  const wiIdx = S.wrongIds.lastIndexOf(q.id);
+  if (wiIdx >= 0) {
+    S.wrongIds.splice(wiIdx, 1);
+  } else {
+    S.correct = Math.max(0, S.correct - 1);
+  }
+  renderQ();
+}
+
+// ── 結果 ────────────────────────────────────────────────────────
+function showResults() {
+  showScreen('resultsScreen');
+  const pct = S.total ? Math.round(S.correct / S.total * 100) : 0;
+  document.getElementById('resPct').textContent   = pct + '%';
+  document.getElementById('resDetail').textContent =
+    `${S.total}問中 ${S.correct}問正解（ミス ${S.total - S.correct}問）`;
+  document.getElementById('wrongSection').style.display = 'none';
+}
+
+function retryAll() { startQuiz(); }
+
+function retryWrong() {
+  if (!S.wrongIds.length) { alert('この回の間違えた問題はありません！'); return; }
+  const ws = new Set(S.wrongIds);
+  S.queue = shuffle(QUESTIONS.filter(q => ws.has(q.id)));
+  S.idx = 0; S.correct = 0; S.total = 0; S.wrongIds = [];
+  showScreen('quizScreen');
+  renderQ();
+}
+
+// 間違えた問題を出題順（元の並び）で復習
+function retryWrongSeq() {
+  if (!S.wrongIds.length) { alert('この回の間違えた問題はありません！'); return; }
+  const ws = new Set(S.wrongIds);
+  // wrongIds の順序（間違えた順）でキューを作成
+  const ordered = S.wrongIds.map(id => QUESTIONS.find(q => q.id === id)).filter(Boolean);
+  S.queue = ordered;
+  S.idx = 0; S.correct = 0; S.total = 0; S.wrongIds = [];
+  showScreen('quizScreen');
+  renderQ();
+}
+
+function retryStoredWrong() {
+  const stored = loadWrong();
+  if (!stored.size) {
+    alert('累計の苦手問題がまだありません。\nまずは通常モードで練習してください！');
+    return;
+  }
+  S.queue = shuffle(QUESTIONS.filter(q => stored.has(q.id)));
+  if (!S.queue.length) { alert('該当する問題が見つかりません。'); return; }
+  S.idx = 0; S.correct = 0; S.total = 0; S.wrongIds = [];
+  showScreen('quizScreen');
+  renderQ();
+}
+
+function resetWrong() {
+  const cnt = loadWrong().size;
+  if (!cnt) { alert('苦手リストは空です。'); return; }
+  if (confirm(`苦手リスト（${cnt}問）をリセットしますか？`)) {
+    localStorage.removeItem('k1_wrong');
+    alert('リセットしました。');
+    updateCount();
+  }
+}
+
+function toggleWrongList() {
+  const sec = document.getElementById('wrongSection');
+  if (sec.style.display !== 'none') { sec.style.display = 'none'; return; }
+
+  const ws = new Set(S.wrongIds);
+  const wq = QUESTIONS.filter(q => ws.has(q.id));
+  if (!wq.length) { alert('間違えた問題はありません！'); return; }
+
+  document.getElementById('wrongCards').innerHTML = wq.map(q => {
+    const exp = cleanExp(q.explanation);
+    const expHtml = q.answer === false
+      ? `<span style="font-weight:bold;color:#b71c1c">なぜ×か：</span>${exp || '（解説なし）'}`
+      : (exp || 'この記述は正しいです。');
+    return `
+    <div class="wrong-card">
+      <div class="wrong-stmt">${q.statement}</div>
+      <div class="wrong-ans">正解: ${q.answer ? '○（正しい）' : '×（誤り）'}</div>
+      <div class="wrong-exp">${expHtml}</div>
+    </div>`;
+  }).join('');
+  sec.style.display = 'block';
+}
+
+function goHome() { showScreen('startScreen'); updateCount(); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+init();
+</script>
+</body>
+</html>

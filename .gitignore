@@ -1,0 +1,23 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# 作業用ファイル
+debug_*.py
+debug_*.txt
+check_*.py
+check_*.txt
+fix_result*.txt
+make_result*.txt
+make_stats.txt
+filter_result.txt
+patterns_result.txt
+revert_result.txt
+clean_result.txt
+scraper_r07.txt
+scraper_resync.txt
+final_check.txt
+
+# ログ
+*.log
