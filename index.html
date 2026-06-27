@@ -83,10 +83,33 @@ body {
 
 .progress-row {
   display: flex;
-  justify-content: space-between;
-  padding: 10px 16px 6px;
-  font-size: 12px;
-  color: #888;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 8px 6px;
+  background: white;
+  border-bottom: 1px solid #eee;
+}
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+.stat-val {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1a237e;
+  line-height: 1.15;
+}
+.stat-label {
+  font-size: 10px;
+  color: #999;
+  margin-top: 2px;
+}
+.stat-divider {
+  width: 1px;
+  height: 32px;
+  background: #eee;
 }
 
 .q-card {
@@ -302,8 +325,20 @@ body {
   </div>
   <div class="progress-bar"><div class="progress-fill" id="pFill"></div></div>
   <div class="progress-row">
-    <span id="pText">1 / 10</span>
-    <span id="pScore">正解 0 / 0</span>
+    <div class="stat-item">
+      <span class="stat-val" id="pAnswered">0問</span>
+      <span class="stat-label">回答済</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-val" id="pRemain">-問</span>
+      <span class="stat-label">残り</span>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <span class="stat-val" id="pRate">-%</span>
+      <span class="stat-label">正答率</span>
+    </div>
   </div>
 
   <div class="q-card">
@@ -478,14 +513,22 @@ function startQuiz() {
   renderQ();
 }
 
+function updateStats() {
+  const n = S.queue.length;
+  const remain = n - S.idx - 1;
+  const rate = S.total > 0 ? Math.round(S.correct / S.total * 100) + '%' : '-%';
+  document.getElementById('pAnswered').textContent = S.total + '問';
+  document.getElementById('pRemain').textContent   = remain + '問';
+  document.getElementById('pRate').textContent     = rate;
+}
+
 function renderQ() {
   const q  = S.queue[S.idx];
   const n  = S.queue.length;
   const pct = (S.idx / n) * 100;
 
-  document.getElementById('pFill').style.width  = pct + '%';
-  document.getElementById('pText').textContent  = `${S.idx + 1} / ${n}`;
-  document.getElementById('pScore').textContent = `正解 ${S.correct} / ${S.total}`;
+  document.getElementById('pFill').style.width = pct + '%';
+  updateStats();
 
   document.getElementById('catLabel').textContent = `${q.year} ｜ ${q.category}`;
   document.getElementById('ctxText').textContent  = q.context || '';
@@ -538,7 +581,7 @@ function answer(userAns) {
     body.textContent = expText || 'この記述は正しいです。';
   }
 
-  document.getElementById('pScore').textContent = `正解 ${S.correct} / ${S.total}`;
+  updateStats();
   document.getElementById('ansArea').style.display = 'none';
   document.getElementById('fbArea').style.display  = '';
 }
