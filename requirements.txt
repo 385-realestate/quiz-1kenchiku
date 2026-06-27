@@ -1,2 +1,2 @@
 streamlit>=1.35.0
-streamlit-local-storage>=0.1.6
+streamlit-js-eval>=0.1.9
