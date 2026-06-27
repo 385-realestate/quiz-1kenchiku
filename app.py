@@ -31,7 +31,7 @@ if "wh" not in st.session_state:
     if raw:
         st.session_state.wh = int(raw)
 
-h = st.session_state.get("wh", 750)
+h = st.session_state.get("wh", 800)
 
 # questions.js をインライン化した index.html を構築
 @st.cache_data
@@ -43,4 +43,4 @@ def build_html():
     return html.replace('<script src="questions.js"></script>',
                         f'<script>{js}</script>')
 
-components.html(build_html(), height=h, scrolling=False)
+components.html(build_html(), height=h, scrolling=True)
