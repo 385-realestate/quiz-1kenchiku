@@ -351,6 +351,7 @@ body {
     <div id="catLabel" class="cat-badge"></div>
     <div class="context-box" id="ctxBox">
       <span id="ctxText"></span>
+      <img id="ctxImg" style="max-width:100%; margin-top:10px; border-radius:6px; display:none;" alt="問題図">
     </div>
     <div class="statement" id="stmtText"></div>
   </div>
@@ -582,6 +583,19 @@ function renderQ() {
   document.getElementById('catLabel').textContent = `${q.year} ｜ ${q.category}`;
   document.getElementById('ctxText').textContent  = q.context || '';
   document.getElementById('stmtText').textContent = q.statement;
+
+  // 図の表示
+  const imgEl = document.getElementById('ctxImg');
+  const ctxBox = document.getElementById('ctxBox');
+  if (q.img) {
+    imgEl.src = q.img;
+    imgEl.style.display = 'block';
+    ctxBox.style.display = '';
+  } else {
+    imgEl.src = '';
+    imgEl.style.display = 'none';
+    ctxBox.style.display = (q.context) ? '' : 'none';
+  }
 
 
   document.getElementById('ansArea').style.display = '';
