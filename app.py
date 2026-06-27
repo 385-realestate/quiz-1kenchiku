@@ -32,8 +32,8 @@ st.markdown("""
 }
 .ans-btn:active { opacity: 0.75; }
 .ans-btn small { display: block; font-size: 0.35em; margin-top: 4px; }
-.ans-maru  { background:#e8f5e9; border:3px solid #43a047; color:#1b5e20; }
-.ans-batsu { background:#ffebee; border:3px solid #e53935; color:#b71c1c; }
+.ans-maru  { background:#eef4ee; border:2px solid #7aab7a; color:#2d5a2d; }
+.ans-batsu { background:#f5eeed; border:2px solid #b87070; color:#7a2d2d; }
 /* metricsを小さく */
 [data-testid="stMetricLabel"] p { font-size: 11px !important; }
 [data-testid="stMetricValue"]    { font-size: 20px !important; }
@@ -194,9 +194,9 @@ elif S.screen == "quiz":
         correct_label = "○（正しい）" if q["answer"] else "×（誤り）"
 
         if ok:
-            st.success("✓ 正解！")
+            st.success("✓ 正解！", icon=None)
         else:
-            st.error(f"✗ 不正解　　正解: {correct_label}")
+            st.warning(f"✗ 不正解　正解: {correct_label}", icon=None)
 
         exp = (q.get("explanation") or "").strip()
         if q["answer"] is False:
