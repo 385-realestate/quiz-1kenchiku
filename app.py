@@ -14,23 +14,39 @@ st.markdown("""
 <meta name="apple-mobile-web-app-capable" content="yes">
 <style>
 .block-container { max-width: 640px !important; padding: 2.5rem 1rem 4rem !important; }
+
+/* 共通ボタン */
 .stButton > button {
-    border-radius: 10px !important; font-size: 15px !important;
-    font-weight: 600 !important; min-height: 44px !important;
+    border-radius: 10px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    min-height: 44px !important;
 }
-.ans-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0 4px; }
-.ans-btn {
-    display:block; text-decoration:none; border-radius:14px;
-    font-size:3.2rem; text-align:center; padding:18px 8px 12px;
-    font-weight:bold; line-height:1.1; transition:opacity .15s;
+
+/* ○× ボタン専用
+   ─ 2列レイアウト内の最初の列 = ○、最後の列 = × ─ */
+[data-testid="stHorizontalBlock"] [data-testid="stColumn"]:first-child button {
+    background: #eef4ee !important;
+    border: 2px solid #7aab7a !important;
+    color: #2d5a2d !important;
+    font-size: 2.5rem !important;
+    height: 88px !important;
+    border-radius: 14px !important;
+    font-weight: bold !important;
 }
-.ans-btn:active { opacity:.75; }
-.ans-btn small { display:block; font-size:.35em; margin-top:4px; }
-.ans-maru  { background:#eef4ee; border:2px solid #7aab7a; color:#2d5a2d; }
-.ans-batsu { background:#f5eeed; border:2px solid #b87070; color:#7a2d2d; }
-[data-testid="stMetricLabel"] p { font-size:11px !important; }
-[data-testid="stMetricValue"]   { font-size:20px !important; }
-hr { margin:.6rem 0 !important; }
+[data-testid="stHorizontalBlock"] [data-testid="stColumn"]:last-child button {
+    background: #f5eeed !important;
+    border: 2px solid #b87070 !important;
+    color: #7a2d2d !important;
+    font-size: 2.5rem !important;
+    height: 88px !important;
+    border-radius: 14px !important;
+    font-weight: bold !important;
+}
+
+[data-testid="stMetricLabel"] p { font-size: 11px !important; }
+[data-testid="stMetricValue"]   { font-size: 20px !important; }
+hr { margin: .6rem 0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -51,14 +67,12 @@ STORAGE_KEY = "k1_quiz_v1"
 
 # ── localStorage ─────────────────────────────────────────────────────
 def ls_get():
-    """localStorageから読み込む（初回はNone、2回目以降に値が返る）"""
     return streamlit_js_eval(
         js_expressions=f"localStorage.getItem('{STORAGE_KEY}')",
         key="ls_get"
     )
 
 def ls_set(data: dict):
-    """localStorageに保存"""
     n = st.session_state.get("_save_n", 0) + 1
     st.session_state["_save_n"] = n
     safe = json.dumps(data, ensure_ascii=False).replace("\\", "\\\\").replace("'", "\\'")
@@ -68,7 +82,6 @@ def ls_set(data: dict):
     )
 
 def ls_del():
-    """localStorageから削除"""
     n = st.session_state.get("_save_n", 0) + 1
     st.session_state["_save_n"] = n
     streamlit_js_eval(
@@ -106,10 +119,15 @@ def init():
 init()
 S = st.session_state
 
-# ── localStorageから復元（ページ更新・再起動対策）──────────────────
-raw = ls_get()   # 初回None、次のrerunで実際の値が返る
+# ── localStorageから復元 ─────────────────────────────────────────────
+# ls_get()は初回None→2回目以降に実値が返る（非同期コンポーネント）
+raw = ls_get()
 
-if raw and not st.session_state.get("_storage_restored"):
+# renderカウントで「まだ未取得」と「データなし」を区別する
+_rc = st.session_state.get("_rc", 0) + 1
+st.session_state["_rc"] = _rc
+
+if raw and not st.session_state.get("_restored"):
     try:
         data  = json.loads(raw)
         queue = [QMAP[id] for id in data.get("queue_ids", []) if id in QMAP]
@@ -125,11 +143,12 @@ if raw and not st.session_state.get("_storage_restored"):
             S.screen   = "quiz"
     except Exception:
         pass
-    st.session_state["_storage_restored"] = True
+    st.session_state["_restored"] = True
     st.rerun()
 
-if not st.session_state.get("_storage_restored"):
-    st.session_state["_storage_restored"] = True   # データなし確定
+# 2回目のrenderでもデータなし → 保存データなし確定
+if not raw and _rc >= 2:
+    st.session_state["_restored"] = True
 
 
 def handle_answer(user_ans: bool):
@@ -144,15 +163,6 @@ def handle_answer(user_ans: bool):
         S.cumulative_wrong.add(q["id"])
     S.answered = True
     S.last_ok  = ok
-
-
-# ── ○×ボタン（クエリパラメータ経由）─────────────────────────────────
-params = st.query_params
-if "ans" in params and S.screen == "quiz" and not S.answered:
-    handle_answer(params["ans"] == "1")
-    st.query_params.clear()
-    save_progress()
-    st.rerun()
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -226,16 +236,22 @@ elif S.screen == "quiz":
     if q.get("context"):
         with st.expander("問題文", expanded=True):
             st.write(q["context"])
-
     st.markdown(f"### {q['statement']}")
+    st.write("")
 
+    # ── 未回答: ○× ボタン（2列、CSSで大型スタイル）────────────────
     if not S.answered:
-        st.markdown(f"""
-<div class="ans-grid">
-  <a class="ans-btn ans-maru"  href="?ans=1">○<small>正しい</small></a>
-  <a class="ans-btn ans-batsu" href="?ans=0">×<small>誤り</small></a>
-</div>""", unsafe_allow_html=True)
+        bc1, bc2 = st.columns(2)
+        with bc1:
+            if st.button("○", key="maru", use_container_width=True):
+                handle_answer(True); save_progress(); st.rerun()
+            st.caption("正しい")
+        with bc2:
+            if st.button("×", key="batsu", use_container_width=True):
+                handle_answer(False); save_progress(); st.rerun()
+            st.caption("誤り")
 
+    # ── 回答後フィードバック ────────────────────────────────────────
     else:
         ok = S.last_ok
         cl = "○（正しい）" if q["answer"] else "×（誤り）"
@@ -249,23 +265,20 @@ elif S.screen == "quiz":
             st.write(exp or "この記述は正しいです。")
 
         st.write("")
-        fc1, fc2 = st.columns(2)
-        with fc1:
-            if st.button("次の問題 →", type="primary", use_container_width=True, key="next"):
-                S.idx += 1; S.answered = False
-                if S.idx >= n: S.screen = "results"; ls_del()
-                else: save_progress()
-                st.rerun()
-        with fc2:
-            if st.button("← やり直す", use_container_width=True, key="undo"):
-                S.total = max(0, S.total - 1)
-                if not ok:
-                    for i in range(len(S.wrong_ids)-1, -1, -1):
-                        if S.wrong_ids[i] == q["id"]: S.wrong_ids.pop(i); break
-                    S.cumulative_wrong.discard(q["id"])
-                else:
-                    S.correct = max(0, S.correct - 1)
-                S.answered = False; save_progress(); st.rerun()
+        if st.button("次の問題 →", type="primary", use_container_width=True, key="next"):
+            S.idx += 1; S.answered = False
+            if S.idx >= n: S.screen = "results"; ls_del()
+            else: save_progress()
+            st.rerun()
+        if st.button("← やり直す", use_container_width=True, key="undo"):
+            S.total = max(0, S.total - 1)
+            if not ok:
+                for i in range(len(S.wrong_ids)-1, -1, -1):
+                    if S.wrong_ids[i] == q["id"]: S.wrong_ids.pop(i); break
+                S.cumulative_wrong.discard(q["id"])
+            else:
+                S.correct = max(0, S.correct - 1)
+            S.answered = False; save_progress(); st.rerun()
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -283,8 +296,8 @@ elif S.screen == "results":
     wrong_qs = [q for q in S.queue if q["id"] in set(S.wrong_ids)]
 
     if st.button("もう一度（全問）", type="primary", use_container_width=True, key="r_all"):
-        S.queue = random.sample(S.queue, len(S.queue))
-        S.idx=0; S.correct=0; S.total=0; S.wrong_ids=[]; S.answered=False; S.screen="quiz"
+        S.queue=random.sample(S.queue,len(S.queue))
+        S.idx=0;S.correct=0;S.total=0;S.wrong_ids=[];S.answered=False;S.screen="quiz"
         save_progress(); st.rerun()
     if wrong_qs:
         if st.button(f"間違えた問題のみ（{len(wrong_qs)}問）", use_container_width=True, key="r_w"):
