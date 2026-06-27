@@ -19,9 +19,13 @@ footer,
 [data-testid="stDecoration"],
 [data-testid="stStatusWidget"],
 [data-testid="stAppViewFooter"],
+[data-testid="manage-app-button"],
+[data-testid="stDeployButton"],
 div[class*="viewerBadge"],
 div[class*="ViewerBadge"],
 div[class*="badge"],
+div[class*="deploy"],
+div[class*="Deploy"],
 a[href*="streamlit.io"],
 a[href*="share.streamlit.io"] { display: none !important; }
 .block-container   { padding: 0 !important; max-width: 100% !important; }
@@ -29,6 +33,18 @@ a[href*="share.streamlit.io"] { display: none !important; }
 [data-testid="stAppViewContainer"] { padding: 0 !important; }
 iframe { display: block; border: none; }
 </style>
+<script>
+// Streamlit Cloud の "Manage app" ボタンを定期的に削除
+(function remove() {
+  document.querySelectorAll('button, div, a').forEach(el => {
+    if (el.textContent.trim() === 'Manage app' ||
+        el.getAttribute('aria-label') === 'Manage app') {
+      el.style.display = 'none';
+    }
+  });
+  setTimeout(remove, 800);
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # 画面の高さを1回だけ取得（2回目以降は session_state から使う）
