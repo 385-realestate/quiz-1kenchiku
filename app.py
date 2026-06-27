@@ -10,7 +10,7 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-.block-container { max-width: 640px !important; padding: 0.8rem 1rem 4rem !important; }
+.block-container { max-width: 640px !important; padding: 2.5rem 1rem 4rem !important; }
 /* 全ボタン共通 */
 .stButton > button {
     border-radius: 10px !important;
