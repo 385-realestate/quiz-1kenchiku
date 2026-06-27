@@ -10,8 +10,10 @@ st.set_page_config(
 )
 
 st.markdown("""
+<div style="display:none">
 <meta name="apple-mobile-web-app-title" content="1級施工管理技士○×テスト">
 <meta name="apple-mobile-web-app-capable" content="yes">
+</div>
 <style>
 .block-container { max-width: 640px !important; padding: 2.5rem 1rem 4rem !important; }
 
