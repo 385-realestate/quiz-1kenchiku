@@ -2,11 +2,16 @@ import streamlit as st
 import json, re, random
 
 st.set_page_config(
-    page_title="1級建築施工管理技士 ○×クイズ",
+    page_title="1級施工管理技士○×テスト",
     page_icon="🏗️",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
+# iOSホーム画面追加時の表示名を上書き
+st.markdown("""
+<meta name="apple-mobile-web-app-title" content="1級施工管理技士○×テスト">
+<meta name="apple-mobile-web-app-capable" content="yes">
+""", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
