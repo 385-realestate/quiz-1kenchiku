@@ -11,15 +11,26 @@ st.set_page_config(
 )
 
 # ── パスワード認証（localStorage永続化）──────────────────────
-AUTH_TOKEN = "kenchiku_auth_ok"  # localStorageに保存するトークン値
+AUTH_TOKEN = "kenchiku_auth_ok"
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
+if "save_token" not in st.session_state:
+    st.session_state.save_token = False
 
-# localStorageに認証済みトークンがあればスキップ
+# ログイン成功後の次レンダリングでlocalStorageに保存
+# （st.rerun()より前に実行するとJSが走る前にページが切り替わるため分離）
+if st.session_state.save_token:
+    streamlit_js_eval(
+        js_expressions=f"localStorage.setItem('auth_token', '{AUTH_TOKEN}')",
+        key="save_auth"
+    )
+    st.session_state.save_token = False
+
+# localStorageに認証済みトークンがあれば自動ログイン
 if not st.session_state.authenticated:
     saved = streamlit_js_eval(
-        js_expressions=f"localStorage.getItem('auth_token')",
+        js_expressions="localStorage.getItem('auth_token')",
         key="check_auth"
     )
     if saved == AUTH_TOKEN:
@@ -28,7 +39,6 @@ if not st.session_state.authenticated:
 if not st.session_state.authenticated:
     st.markdown("""
     <style>
-    /* ── ログイン画面デザイン ── */
     .login-wrap {
         max-width: 420px;
         margin: 80px auto 0;
@@ -40,8 +50,6 @@ if not st.session_state.authenticated:
     }
     .login-wrap h2 { font-size: 1.5rem; margin-bottom: 4px; }
     .login-wrap p  { font-size: 0.85rem; color: #b0bec5; margin-bottom: 24px; }
-
-    /* ── Streamlit 英語UI を非表示 ── */
     .stTextInput [data-baseweb="input"] + div,
     small.st-emotion-cache-1dp5vir,
     [data-testid="InputInstructions"] { display: none !important; }
@@ -58,12 +66,8 @@ if not st.session_state.authenticated:
     pw = st.text_input("アクセスパスワード", type="password", placeholder="パスワードを入力")
     if st.button("入る", use_container_width=True):
         if pw == st.secrets["APP_PASSWORD"]:
-            # localStorageにトークンを保存（以降はパスワード不要）
-            streamlit_js_eval(
-                js_expressions=f"localStorage.setItem('auth_token', '{AUTH_TOKEN}')",
-                key="save_auth"
-            )
             st.session_state.authenticated = True
+            st.session_state.save_token = True  # 次レンダリングでlocalStorageへ保存
             st.rerun()
         else:
             st.error("パスワードが違います")
