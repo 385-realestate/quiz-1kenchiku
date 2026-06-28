@@ -9,9 +9,20 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── パスワード認証 ──────────────────────────────────────────
+# ── パスワード認証（localStorage永続化）──────────────────────
+AUTH_TOKEN = "kenchiku_auth_ok"  # localStorageに保存するトークン値
+
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
+
+# localStorageに認証済みトークンがあればスキップ
+if not st.session_state.authenticated:
+    saved = streamlit_js_eval(
+        js_expressions=f"localStorage.getItem('auth_token')",
+        key="check_auth"
+    )
+    if saved == AUTH_TOKEN:
+        st.session_state.authenticated = True
 
 if not st.session_state.authenticated:
     st.markdown("""
@@ -30,29 +41,27 @@ if not st.session_state.authenticated:
     .login-wrap p  { font-size: 0.85rem; color: #b0bec5; margin-bottom: 24px; }
 
     /* ── Streamlit 英語UI を非表示 ── */
-    /* "Press Enter to apply" ヒント */
     .stTextInput [data-baseweb="input"] + div,
     small.st-emotion-cache-1dp5vir,
     [data-testid="InputInstructions"] { display: none !important; }
-
-    /* "Running..." スピナーのテキスト */
     [data-testid="stStatusWidget"] { display: none !important; }
-
-    /* ヘッダー・フッター全般 */
     #MainMenu, header, footer { display: none !important; }
-
-    /* ログイン画面全体を中央寄せ */
     .block-container { max-width: 480px !important; padding-top: 0 !important; }
     </style>
     <div class="login-wrap">
       <h2>🏗️ 1級建築施工管理技士</h2>
-      <p>○×クイズ 1000問 — 過去問&頻出知識</p>
+      <p>○×クイズ — 過去問&頻出知識</p>
     </div>
     """, unsafe_allow_html=True)
 
     pw = st.text_input("アクセスパスワード", type="password", placeholder="パスワードを入力")
     if st.button("入る", use_container_width=True):
         if pw == st.secrets["APP_PASSWORD"]:
+            # localStorageにトークンを保存（以降はパスワード不要）
+            streamlit_js_eval(
+                js_expressions=f"localStorage.setItem('auth_token', '{AUTH_TOKEN}')",
+                key="save_auth"
+            )
             st.session_state.authenticated = True
             st.rerun()
         else:
