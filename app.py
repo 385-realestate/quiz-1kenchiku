@@ -1,3 +1,4 @@
+import hashlib
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_js_eval import streamlit_js_eval
@@ -116,8 +117,9 @@ if "wh" not in st.session_state:
 h = st.session_state.get("wh", 800)
 
 # questions.js をインライン化した index.html を構築
+# questions_hash が変わると自動でキャッシュ破棄
 @st.cache_data
-def build_html():
+def build_html(questions_hash: str):
     with open("questions.js", encoding="utf-8") as f:
         js = f.read()
     with open("index.html", encoding="utf-8") as f:
@@ -157,4 +159,6 @@ def build_html():
     html = html.replace('</body>', hide_js + '</body>')
     return html
 
-components.html(build_html(), height=h, scrolling=True)
+with open("questions.js", encoding="utf-8") as _f:
+    _q_hash = hashlib.md5(_f.read().encode()).hexdigest()[:8]
+components.html(build_html(_q_hash), height=h, scrolling=True)
