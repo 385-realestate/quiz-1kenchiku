@@ -471,6 +471,9 @@ function clearWrong(id) {
 
 // ── 初期化 ──────────────────────────────────────────────────────
 function init() {
+  // ブラウザに保存領域の永続化をリクエスト（容量逼迫時の自動削除を防ぐ）
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
   buildChips('yearFilters', [...new Set(QUESTIONS.map(q => q.year))].sort(), S.years, updateCount);
   buildChips('catFilters',  [...new Set(QUESTIONS.map(q => q.category))].sort(), S.cats, updateCount);
   updateCount();
@@ -645,6 +648,7 @@ function answer(userAns) {
   }
 
   updateStats();
+  saveProgress();
   document.getElementById('ansArea').style.display = 'none';
   document.getElementById('fbArea').style.display  = '';
 }
@@ -665,11 +669,13 @@ function undoAnswer() {
   } else {
     S.correct = Math.max(0, S.correct - 1);
   }
+  saveProgress();
   renderQ();
 }
 
 // ── 結果 ────────────────────────────────────────────────────────
 function showResults() {
+  clearProgress();
   showScreen('resultsScreen');
   const pct = S.total ? Math.round(S.correct / S.total * 100) : 0;
   document.getElementById('resPct').textContent   = pct + '%';
