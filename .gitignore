@@ -24,3 +24,14 @@ final_check.txt
 
 # シークレット（パスワード等）— GitHubに上げない
 .streamlit/secrets.toml
+
+# 追加: 単発の作業スクリプト・スクレイパーログ（2026-08 整理）
+check.py
+clean_explanations.py
+filter_check.py
+fix_answers.py
+remove_fig_questions.py
+revert_batsu.py
+make_final.txt
+scraper_log*.txt
+github_push.bat

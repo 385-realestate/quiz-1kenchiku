@@ -1,18 +1,17 @@
 """
-questions.js の「図に示す」問題に画像データを追加するパッチスクリプト
+questions.js の全問題に対して元ページの図を追加するパッチスクリプト
 
 使い方:
-  pip install requests beautifulsoup4
-  python add_images.py
+  python add_images.py           # 未処理の全問題をチェック
+  python add_images.py --force   # img フィールドありも再取得
 
 動作:
-  1. questions.js を読み込み
-  2. context/statement に「図」を含む問題を検出
-  3. 元の問題ページから <img> を取得 → base64でエンコード
-  4. questions.js の該当問題に "img" フィールドを追加して上書き保存
+  1. questions.js の全問題から元問題IDを収集（約250件）
+  2. 各ページに <img> があれば base64 エンコードして "img" フィールドに追加
+  3. questions.js を上書き保存
 """
 
-import json, re, time, os
+import json, re, time, os, sys
 import requests
 from bs4 import BeautifulSoup
 import base64
@@ -24,13 +23,13 @@ HEADERS = {
     "Accept-Language": "ja,en;q=0.9",
 }
 
-FIG_PATTERN = re.compile(r"図に示す|下図|次の図|図のよう|右図|左図|図－")
+# これらを含む src はアイコン等なのでスキップ
+SKIP_KEYWORDS = ["icon", "logo", "btn", "arrow", "bullet", "mark", "star",
+                 "favicon", "banner", "ad", "banner"]
 
-SKIP_KEYWORDS = ["icon", "logo", "btn", "arrow", "bullet", "mark", "star"]
 
-
-def fetch(url):
-    r = requests.get(url, headers=HEADERS, timeout=20)
+def fetch(url, timeout=20):
+    r = requests.get(url, headers=HEADERS, timeout=timeout)
     return r
 
 
@@ -48,30 +47,32 @@ def get_figure(qid):
             src = img.get("src", "").strip()
             if not src:
                 continue
-            # アイコン系・ロゴ系は除外
             if any(kw in src.lower() for kw in SKIP_KEYWORDS):
                 continue
             if not src.startswith("http"):
                 src = BASE_URL + ("" if src.startswith("/") else "/") + src
 
             try:
-                ir = fetch(src)
+                ir = fetch(src, timeout=15)
                 ct = ir.headers.get("Content-Type", "image/png").split(";")[0].strip()
                 if not ct.startswith("image/"):
                     continue
+                # 極端に小さい画像（アイコン等）はスキップ
+                if len(ir.content) < 1000:
+                    continue
                 b64 = base64.b64encode(ir.content).decode()
-                print(f"      → 図取得: {src} ({len(ir.content)//1024}KB)")
                 return f"data:{ct};base64,{b64}"
             except Exception as e:
-                print(f"      → 画像DL失敗: {e}")
                 continue
 
     except Exception as e:
-        print(f"  ERROR fetching {url}: {e}")
+        print(f"  ERROR: {e}")
     return None
 
 
 def main():
+    force = "--force" in sys.argv
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     js_path = os.path.join(script_dir, "questions.js")
 
@@ -85,42 +86,37 @@ def main():
     questions = json.loads(m.group(1))
     print(f"読み込み: {len(questions)} 問")
 
-    # 図を含む問題の base_qid を収集
-    fig_qids = {}   # base_qid -> [index, ...]
+    # 全問題の base_qid を収集
+    qid_map = {}  # base_qid -> [index, ...]
     for i, q in enumerate(questions):
-        if q.get("img"):
+        if not force and q.get("img"):
             continue  # 既に画像あり
-        ctx = (q.get("context") or "") + " " + (q.get("statement") or "")
-        if FIG_PATTERN.search(ctx):
-            base_qid = q["id"].rsplit("_", 1)[0]
-            fig_qids.setdefault(base_qid, []).append(i)
+        base_qid = q["id"].rsplit("_", 1)[0]
+        qid_map.setdefault(base_qid, []).append(i)
 
-    if not fig_qids:
-        print("図を含む未処理の問題はありませんでした。")
-        return
-
-    print(f"図を含む問題グループ: {len(fig_qids)} 件\n")
+    total = len(qid_map)
+    print(f"チェック対象: {total} 問題ページ")
+    print("（図がないページは「図なし」と表示します）\n")
 
     updated = 0
-    skipped = 0
-    for j, (qid, indices) in enumerate(fig_qids.items()):
-        print(f"[{j+1:3d}/{len(fig_qids)}] 問題 {qid} (該当 {len(indices)} 問) ...", flush=True)
+    for j, (qid, indices) in enumerate(qid_map.items()):
+        print(f"[{j+1:3d}/{total}] 問題 {qid} ...", end=" ", flush=True)
         img_data = get_figure(qid)
         if img_data:
             for idx in indices:
                 questions[idx]["img"] = img_data
             updated += 1
+            print(f"図あり → {len(indices)}問に追加")
         else:
-            print(f"      → 図なし（スキップ）")
-            skipped += 1
-        time.sleep(0.8)
+            print("図なし")
+        time.sleep(0.6)
 
     print(f"\n--- 完了 ---")
-    print(f"  画像追加: {updated} グループ")
-    print(f"  図なし  : {skipped} グループ")
+    print(f"  図あり: {updated} ページ")
+    print(f"  図なし: {total - updated} ページ")
 
     if updated == 0:
-        print("更新なし。questions.js はそのままです。")
+        print("新規の図はありませんでした。questions.js はそのままです。")
         return
 
     # 保存
@@ -133,7 +129,7 @@ def main():
         f.write(header)
         json.dump(questions, f, ensure_ascii=False, indent=2)
         f.write(";\n")
-    print(f"questions.js を更新しました。")
+    print(f"questions.js を更新しました（図あり: {updated} ページ）。")
 
 
 if __name__ == "__main__":
