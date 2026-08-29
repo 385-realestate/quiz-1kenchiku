@@ -1,0 +1,26 @@
+name: CI
+
+# GitHub Pages に公開される前に「壊れた JS」を弾く最小チェック。
+# push のたびに全 .js を構文チェックするだけ。
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 全 .js の構文チェック
+        run: |
+          shopt -s globstar nullglob
+          fail=0
+          for f in **/*.js; do
+            node --check "$f" && echo "OK  $f" || { echo "NG  $f"; fail=1; }
+          done
+          exit $fail
